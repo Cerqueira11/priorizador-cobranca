@@ -18,19 +18,19 @@ O objetivo deste projeto é estimar a **probabilidade de pagamento** de cada cli
 
 ```mermaid
 flowchart LR
-    A["1. Dados Sintéticos\n(src/gerar_dados.py)"] --> B["2. Modelo de Propensão\n(src/treinar_modelo.py)"]
-    B --> C["3. Score e Régua de Ação\n(src/priorizar.py)"]
-    C --> D["4. Indicadores em SQL\n(src/indicadores.sql)"]
+    A["1. Dados Sintéticos (gerar_dados.py)"] --> B["2. Modelo de Propensão (treinar_modelo.py)"]
+    B --> C["3. Score e Régua (priorizar.py)"]
+    C --> D["4. Indicadores SQL (indicadores.sql)"]
 ```
 
 1. **Dados Sintéticos (`src/gerar_dados.py`):** Gera 5.000 clientes fictícios com variáveis de atraso, histórico, renda, relacionamento e canal preferido. A variável alvo (`pagou`) é gerada por uma regra probabilística (função sigmoide com ruído e penalidade não-linear após 90 dias de atraso).
 2. **Modelagem (`src/treinar_modelo.py`):** Utiliza `Pipeline` e `ColumnTransformer` (`StandardScaler` nas numéricas + `OneHotEncoder` nas categóricas) para evitar vazamento de dados (*data leakage*). Compara **Regressão Logística** e **Gradient Boosting** em validação cruzada de 5 folds e avalia o ganho de variáveis derivadas de negócio (`divida_relativa` à renda e marco `atraso_90`).
 3. **Priorização e Régua de Acionamento (`src/priorizar.py`):**
-   - **Score de Prioridade (Valor Esperado):** $\text{Score (R\$)} = P(\text{pagar}) \times \text{Valor Devido}$. Prioriza onde o esforço de cobrança tem maior retorno esperado.
+   - **Score de Prioridade (Valor Esperado):** `score_prioridade = prob_pagamento × valor_devido`. Prioriza onde o esforço de cobrança tem maior retorno financeiro esperado (em R$).
    - **Ação Sugerida (definida pela faixa de propensão):**
-     - **Alta ($\ge 60\%$):** `Mensagem Automatica` (cliente com alta chance de autoliquidação; acionamento digital de baixo custo).
-     - **Média ($30\%$ a $60\%$):** `Ligacao` (foco da equipe humana de atendimento, ordenada pelo maior valor esperado).
-     - **Baixa ($< 30\%$):** `Proposta de Acordo` (oferta automatizada de parcelamento ou desconto).
+     - **Alta (≥ 60%):** `Mensagem Automatica` (cliente com alta chance de autoliquidação; acionamento digital de baixo custo).
+     - **Média (30% a 60%):** `Ligacao` (foco da equipe humana de atendimento, ordenada pelo maior valor esperado).
+     - **Baixa (< 30%):** `Proposta de Acordo` (oferta automatizada de parcelamento ou desconto).
 4. **Indicadores em SQL (`src/indicadores.sql`):** Persiste a carteira priorizada em um banco **SQLite** e extrai indicadores de recuperação por faixa de atraso, exposição por faixa de propensão, conversão por canal e a fila Top 20 para contato humano.
 
 ---
@@ -93,11 +93,11 @@ pytest
 
 ### 2. Calibração da Régua de Acionamento (SQL)
 
-| Faixa de Propensão | Ação Sugerida | Clientes | Valor em Aberto (R\$) | Valor Esperado Recuperável (R\$) | Taxa Real de Pagamento (%) |
+| Faixa de Propensão | Ação Sugerida | Clientes | Valor em Aberto (R$) | Valor Esperado Recuperável (R$) | Taxa Real de Pagamento (%) |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| **Alta** ($\ge 60\%$) | Mensagem Automática | 1.411 | 2.052.922,37 | 1.537.687,67 | **74,5%** |
-| **Média** ($30\%$ a $60\%$) | Ligação | 1.331 | 2.309.332,51 | 1.034.195,18 | **44,5%** |
-| **Baixa** ($< 30\%$) | Proposta de Acordo | 2.258 | 4.718.569,64 | 590.605,00 | **15,3%** |
+| **Alta** (≥ 60%) | Mensagem Automática | 1.411 | 2.052.922,37 | 1.537.687,67 | **74,5%** |
+| **Média** (30% a 60%) | Ligação | 1.331 | 2.309.332,51 | 1.034.195,18 | **44,5%** |
+| **Baixa** (< 30%) | Proposta de Acordo | 2.258 | 4.718.569,64 | 590.605,00 | **15,3%** |
 
 ![Recuperação por Faixa de Atraso](assets/recuperacao_por_atraso.png)
 
