@@ -34,7 +34,7 @@ def gerar_base_clientes(n_clientes: int = 5000, seed: int = SEED) -> pd.DataFram
         p=[0.45, 0.25, 0.20, 0.10],
     )
 
-    # Renda de referência por faixa (R$ 2.500, R$ 5.000, R$ 10.000)
+    # Renda mensal de referência por faixa e comprometimento relativo
     renda_ref = np.array([2500, 5000, 10000])[renda_faixa - 1]
     divida_relativa = np.clip(valor_devido / renda_ref, 0.0, 5.0)
 
@@ -53,7 +53,7 @@ def gerar_base_clientes(n_clientes: int = 5000, seed: int = SEED) -> pd.DataFram
         + 0.35 * (renda_faixa - 1)
         - 0.50 * divida_relativa
         + efeito_canal
-        + rng.normal(0, 1.1, size=n_clientes)
+        + rng.normal(0, 0.8, size=n_clientes)
     )
 
     prob_real_pagamento = 1 / (1 + np.exp(-score_latente))
