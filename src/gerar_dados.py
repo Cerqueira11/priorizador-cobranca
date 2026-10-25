@@ -45,13 +45,14 @@ def gerar_base_clientes(n_clientes: int = 5000, seed: int = SEED) -> pd.DataFram
     )
 
     score_latente = (
-        1.5
+        1.6
         - 0.020 * dias_atraso
         - 0.60 * (dias_atraso > 90)
         - 0.45 * qtd_atrasos_12m
         + 0.012 * tempo_relacionamento_meses
         + 0.35 * (renda_faixa - 1)
-        - 0.50 * divida_relativa
+        - 0.00008 * valor_devido
+        - 0.40 * divida_relativa
         + efeito_canal
         + rng.normal(0, 0.8, size=n_clientes)
     )
