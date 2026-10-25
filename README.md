@@ -1,6 +1,8 @@
 # Priorizador de Cobrança com IA
 
-Pipeline de análise, modelagem preditiva e priorização de contatos para uma operação de cobrança bancária.
+Pipeline de análise, modelagem preditiva e priorização de contatos para uma operação de cobrança.
+
+> **Nota:** Projeto educacional com dados 100% fictícios, sem vínculo com nenhuma instituição financeira.
 
 ---
 
@@ -24,7 +26,7 @@ flowchart LR
 ```
 
 1. **Dados Sintéticos (`src/gerar_dados.py`):** Gera 5.000 clientes fictícios com variáveis de atraso, histórico, renda, relacionamento e canal preferido. A variável alvo (`pagou`) é gerada por uma regra probabilística (função sigmoide com ruído e penalidade não-linear após 90 dias de atraso).
-2. **Modelagem (`src/treinar_modelo.py`):** Utiliza `Pipeline` e `ColumnTransformer` (`StandardScaler` nas numéricas + `OneHotEncoder` nas categóricas) para evitar vazamento de dados (*data leakage*). Compara **Regressão Logística** e **Gradient Boosting** em validação cruzada de 5 folds e avalia o ganho de variáveis derivadas de negócio (`divida_relativa` à renda e marco `atraso_90`).
+2. **Modelagem (`src/treinar_modelo.py`):** Utiliza `Pipeline` e `ColumnTransformer` (`StandardScaler` nas numéricas + `OneHotEncoder` nas categóricas) para evitar vazamento de dados (*data leakage*). Compara **Regressão Logística** e **Gradient Boosting** em validação cruzada de 5 folds e avalia a inclusão de variáveis derivadas de negócio (`divida_relativa` à renda e marco `atraso_90`).
 3. **Priorização e Régua de Acionamento (`src/priorizar.py`):**
    - **Score de Prioridade (Valor Esperado):** `score_prioridade = prob_pagamento × valor_devido`. Prioriza onde o esforço de cobrança tem maior retorno financeiro esperado (em R$).
    - **Ação Sugerida (definida pela faixa de propensão):**
@@ -39,13 +41,17 @@ flowchart LR
 
 ```text
 priorizador-cobranca/
+├── .gitignore
 ├── README.md
 ├── requirements.txt
 ├── run_pipeline.py
 ├── assets/
 │   ├── curva_roc.png
 │   └── recuperacao_por_atraso.png
+├── data/                        # gerado pelo pipeline (não versionado)
+├── models/                      # gerado pelo pipeline (não versionado)
 ├── src/
+│   ├── __init__.py
 │   ├── gerar_dados.py
 │   ├── treinar_modelo.py
 │   ├── priorizar.py
@@ -87,7 +93,7 @@ pytest
 | Gradient Boosting (features brutas, padrão) | 0.8094 ± 0.0127 | 0.7794 |
 | **Regressão Logística (+ features de negócio)** | **0.8179 ± 0.0125** | **0.7890** |
 
-- **Escolha do modelo:** Regressão Logística e Gradient Boosting tiveram empate técnico na validação cruzada. A **Regressão Logística** foi escolhida por ser mais simples e oferecer interpretabilidade direta via coeficientes (requisito comum em crédito e cobrança). A criação das variáveis de negócio (`divida_relativa` e `atraso_90`) trouxe ganho superior à troca de algoritmo.
+- **Escolha do modelo:** Os três cenários ficaram em empate técnico (diferenças menores que o desvio padrão da validação cruzada). A **Regressão Logística** foi escolhida pela simplicidade e interpretabilidade direta via coeficientes. As variáveis de negócio (`divida_relativa` e `atraso_90`) trouxeram ganho marginal — esperado, já que o modelo linear já capturava a maior parte do sinal da base sintética — além de enriquecerem a leitura de risco dos coeficientes.
 
 ![Curva ROC](assets/curva_roc.png)
 
@@ -95,9 +101,11 @@ pytest
 
 | Faixa de Propensão | Ação Sugerida | Clientes | Valor em Aberto (R$) | Valor Esperado Recuperável (R$) | Taxa Real de Pagamento (%) |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| **Alta** (≥ 60%) | Mensagem Automática | 1.411 | 2.052.922,37 | 1.537.687,67 | **74,5%** |
-| **Média** (30% a 60%) | Ligação | 1.331 | 2.309.332,51 | 1.034.195,18 | **44,5%** |
-| **Baixa** (< 30%) | Proposta de Acordo | 2.258 | 4.718.569,64 | 590.605,00 | **15,3%** |
+| **Alta** (≥ 60%) | `Mensagem Automatica` | 1.411 | 2.052.922,37 | 1.537.689,18 | **74,5%** |
+| **Média** (30% a 60%) | `Ligacao` | 1.331 | 2.309.332,51 | 1.034.198,91 | **44,5%** |
+| **Baixa** (< 30%) | `Proposta de Acordo` | 2.258 | 4.718.569,64 | 590.601,27 | **15,3%** |
+
+*Nota: A razão entre Valor Esperado Recuperável e Valor em Aberto é ponderada pelo valor da dívida (dívidas maiores têm menor probabilidade de pagamento), enquanto a Taxa Real de Pagamento é a proporção simples por cliente.*
 
 ![Recuperação por Faixa de Atraso](assets/recuperacao_por_atraso.png)
 
