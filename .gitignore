@@ -1,0 +1,11 @@
+# Dados gerados e banco SQLite
+data/*.csv
+data/*.db
+models/*.joblib
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
