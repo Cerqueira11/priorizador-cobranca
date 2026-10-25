@@ -2,6 +2,7 @@
 
 from pathlib import Path
 import sqlite3
+import sys
 import joblib
 import matplotlib
 
@@ -10,20 +11,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-try:
-    from src.treinar_modelo import (
-        CATEGORICAL_FEATURES,
-        NUMERIC_FEATURES,
-        adicionar_features_negocio,
-    )
-except ModuleNotFoundError:
-    from treinar_modelo import (
-        CATEGORICAL_FEATURES,
-        NUMERIC_FEATURES,
-        adicionar_features_negocio,
-    )
-
 BASE_DIR = Path(__file__).resolve().parent.parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
+
+from src.treinar_modelo import (
+    CATEGORICAL_FEATURES,
+    NUMERIC_FEATURES,
+    adicionar_features_negocio,
+)
+
 DATA_PATH = BASE_DIR / "data" / "clientes_inadimplentes.csv"
 MODEL_PATH = BASE_DIR / "models" / "modelo_cobranca.joblib"
 DB_PATH = BASE_DIR / "data" / "cobranca.db"
@@ -37,10 +34,9 @@ def definir_acao_por_probabilidade(prob: pd.Series) -> tuple[pd.Series, pd.Serie
     condicoes = [
         prob >= 0.60,
         (prob >= 0.30) & (prob < 0.60),
-        prob < 0.30,
     ]
-    faixas = ["Alta", "Media", "Baixa"]
-    acoes = ["Mensagem Automatica", "Ligacao", "Proposta de Acordo"]
+    faixas = ["Alta", "Media"]
+    acoes = ["Mensagem Automatica", "Ligacao"]
 
     faixa_propensao = pd.Series(
         np.select(condicoes, faixas, default="Baixa"), index=prob.index
@@ -62,9 +58,7 @@ def priorizar_carteira(df: pd.DataFrame, modelo) -> pd.DataFrame:
     resultado = df.copy()
     resultado["prob_pagamento"] = np.round(prob, 4)
     # Score de prioridade = Valor Esperado Recuperável (R$) = P(pagar) * valor_devido
-    resultado["score_prioridade"] = np.round(
-        resultado["prob_pagamento"] * resultado["valor_devido"], 2
-    )
+    resultado["score_prioridade"] = np.round(prob * resultado["valor_devido"], 2)
     resultado["faixa_propensao"] = faixa_propensao
     resultado["acao_sugerida"] = acao_sugerida
 
@@ -74,6 +68,14 @@ def priorizar_carteira(df: pd.DataFrame, modelo) -> pd.DataFrame:
     return resultado
 
 
+def so_comentarios(bloco: str) -> bool:
+    """Verifica se um bloco SQL contém apenas comentários ou linhas em branco."""
+    return all(
+        linha.strip().startswith("--") or not linha.strip()
+        for linha in bloco.splitlines()
+    )
+
+
 def salvar_no_sqlite_e_consultar(df_priorizado: pd.DataFrame) -> None:
     """Grava a carteira priorizada no banco SQLite e executa as consultas de indicadores.sql."""
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -81,14 +83,22 @@ def salvar_no_sqlite_e_consultar(df_priorizado: pd.DataFrame) -> None:
         df_priorizado.to_sql("clientes_priorizados", conn, if_exists="replace", index=False)
 
         sql_content = SQL_PATH.read_text(encoding="utf-8")
-        blocos = [b.strip() for b in sql_content.split(";") if b.strip()]
+        blocos = [
+            b.strip()
+            for b in sql_content.split(";")
+            if b.strip() and not so_comentarios(b)
+        ]
 
         print("=" * 72)
         print("INDICADORES DE NEGÓCIO (SQLITE)")
         print("=" * 72)
         for bloco in blocos:
             linhas = bloco.splitlines()
-            titulo = linhas[0].replace("--", "").strip() if linhas[0].startswith("--") else "Consulta SQL"
+            titulo = (
+                linhas[0].replace("--", "").strip()
+                if linhas[0].startswith("--")
+                else "Consulta SQL"
+            )
             df_query = pd.read_sql_query(bloco, conn)
             print(f"\n[{titulo}]")
             print(df_query.to_string(index=False))
