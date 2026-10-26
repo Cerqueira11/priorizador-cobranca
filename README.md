@@ -93,7 +93,7 @@ pytest
 | Gradient Boosting (features brutas, padrão) | 0.8094 ± 0.0127 | 0.7794 |
 | **Regressão Logística (+ features de negócio)** | **0.8179 ± 0.0125** | **0.7890** |
 
-- **Escolha do modelo:** Os três cenários ficaram em empate técnico (diferenças menores que o desvio padrão da validação cruzada). A **Regressão Logística** foi escolhida pela simplicidade e interpretabilidade direta via coeficientes. As variáveis de negócio (`divida_relativa` e `atraso_90`) trouxeram ganho marginal esperado, já que o modelo linear já capturava a maior parte do sinal da base sintética — além de enriquecerem a leitura de risco dos coeficientes.
+- **Escolha do modelo:** Os três cenários ficaram em empate técnico (diferenças menores que o desvio padrão da validação cruzada). A **Regressão Logística** foi escolhida pela simplicidade e interpretabilidade direta via coeficientes. As variáveis de negócio (`divida_relativa` e `atraso_90`) trouxeram ganho marginal esperado, já que o modelo linear já capturava a maior parte do sinal da base sintética, além de enriquecerem a leitura de risco dos coeficientes.
 
 ![Curva ROC](assets/curva_roc.png)
 
